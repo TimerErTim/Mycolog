@@ -2,7 +2,7 @@
 
 # Ensure we are in the project directory
 scriptdir="$(dirname "$0")"
-(cd "$scriptdir" && cd ../) || exit;
+cd "$scriptdir" && cd ../ || exit;
 
 scripts/build.sh \
 && cd frontend \
@@ -10,5 +10,5 @@ scripts/build.sh \
 && npm run build \
 && cd ../ \
 && mkdir -p build/site \
-&& cp -r frontend/build/* build/site/;
+&& cp -r frontend/build/* scripts/run.sh build/site/;
 
