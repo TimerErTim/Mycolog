@@ -10,5 +10,6 @@ scripts/build.sh \
 && npm run build \
 && cd ../ \
 && mkdir -p build/site \
-&& cp -r frontend/build/* scripts/run.sh build/site/;
+&& cp -r frontend/build/* build/site/ \
+&& cp -r scripts/run.sh working_dir/secrets build/;
 
