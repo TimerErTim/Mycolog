@@ -1,18 +1,47 @@
 [package]
 name = "mycolog"
 version = "0.1.0"
+description = "Web application backend for logging and analyizing mushroom cultivation and general mycology"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-surrealdb = { version = "1.2.0", features = ["rustls"], default-features = false }
+# Web server
+axum = { version = "0.7.4" }
+axum-server = "0.6.0"
+
+# Data storage
+surrealdb = { version = "1.2.0", features = [], default-features = false }
+image = "0.24.9"
+flate2 = "1.0.28"
+
+# Async driver
+tokio = { version = "1.36.0", features = ["signal"] }
+tokio-util = { version = "0.7.10", features = ["rt"] }
+
+# Logging
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["tracing-log", "ansi"] }
+tracing-log = "0.2.0"
+
+# Serialization
+chrono = "0.4.34"
+uuid = "1.7.0"
 serde = "1.0.197"
 serde_json = "1.0.114"
+toml = "0.8.10"
+
+# QoL
+cfg-if = "1.0.0"
+anyhow = "1.0.80"
+lazy_static = "1.4.0"
+clap = { version = "4.0.0", features = ["derive"] }
 
 [features]
 "dev-env" = ["surrealdb/kv-mem"]
 "prod-env" = ["surrealdb/kv-rocksdb"]
+
 
 [profile.dev]
 opt-level = 1
@@ -21,4 +50,5 @@ opt-level = 1
 lto = true
 incremental = false
 codegen-units = 1
+panic = "unwind"
 
