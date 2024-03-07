@@ -12,13 +12,13 @@ pub fn setup_logging() -> Result<(), TryInitError> {
         builder
             .pretty()
             .with_max_level(Level::TRACE)
-            .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+            .with_span_events(FmtSpan::FULL)
             .finish()
             .try_init()
     } else if cfg!(feature = "prod-env") {
         builder
             .with_max_level(Level::INFO)
-            .with_span_events(FmtSpan::FULL)
+            .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
             .with_ansi(false)
             .finish()
             .try_init()
