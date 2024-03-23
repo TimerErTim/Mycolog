@@ -1,0 +1,11 @@
+[web]
+ip = "127.0.0.1"
+port = "8031"
+
+[email]
+noreply_sender = "noreply@mycolog.net"
+
+[backups]
+delay_hours = 24
+interval_hours = 24
+max_amount = 15
