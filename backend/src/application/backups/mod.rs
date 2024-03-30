@@ -1,97 +1,119 @@
-use std::fs::{remove_file, File};
+use std::collections::VecDeque;
+use std::fs::{metadata, remove_file, File};
 use std::io::Write;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use chrono::Local;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use surrealdb::engine::any::Any;
-use surrealdb::{Connection, Surreal};
-use tokio::spawn;
-use tokio::task::JoinHandle;
+use futures_lite::stream::StreamExt;
+use tokio::task;
 use tokio::time::{interval, sleep, MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, info_span, trace, Instrument};
+use tracing::{debug, error, info, info_span, instrument, trace, warn, Instrument};
 
-use crate::application::MycologContext;
-use crate::config::GLOBAL_CONFIG;
+pub use crate::application::backups::limits::BackupLimit;
+use crate::application::database::DatabaseRootAccess;
+use crate::config::MycologConfig;
+use crate::context::MycologContext;
+use crate::utils::asynchronous::run_catch;
 
-pub fn backup_task(context: &MycologContext) -> JoinHandle<()> {
-    let surreal = Arc::clone(&context.db);
+mod limits;
+
+pub async fn backup_task(context: Arc<MycologContext>) {
+    let db = context.db.auth_root();
     let shutdown_token = context.task_cancel_token.clone();
-    spawn(async move { backup_service(surreal, shutdown_token).await })
+    backup_service(&context.config, db, shutdown_token).await;
 }
 
-async fn backup_service(surreal: Arc<Surreal<Any>>, shutdown_token: CancellationToken) {
+async fn backup_service(
+    config: &MycologConfig,
+    db: DatabaseRootAccess,
+    shutdown_token: CancellationToken,
+) {
     // Initial delay
-    sleep(Duration::from_secs(
-        GLOBAL_CONFIG.backup_delay_hours as u64 * 3600,
-    ))
-    .await;
+    let delay_duration = Duration::from_secs(config.backup_delay_hours * 3600);
+    tokio::select! {
+        _ = shutdown_token.cancelled() => {
+            info!("quitting backup service before initial delay...");
+        }
+        _ = sleep(delay_duration) => { }
+    }
 
-    let mut interval = interval(Duration::from_secs(
-        GLOBAL_CONFIG.backup_frequency_hours as u64 * 3600,
-    ));
+    // Frequency
+    let mut interval = interval(Duration::from_secs(config.backup_interval_hours * 3600));
     interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
-    let backup_span = info_span!("backup");
-    loop {
+    while !shutdown_token.is_cancelled() {
         tokio::select! {
             _ = shutdown_token.cancelled() => {
-                break;
+                info!("quitting backup service...");
             }
             _ = interval.tick() => {
-                debug!("Backing up database...");
-                let backup_result = backup_database(Arc::clone(&surreal))
-                    .instrument(backup_span.clone().or_current())
-                    .await;
+                debug!("backing up database...");
+                let backup_result = backup_database(&db, &config.backup_limit).await;
                 if let Err(err) = backup_result {
-                    error!("Database backup with error: {err}");
+                    error!("database backup with error: {err}");
                 }
             }
         }
     }
 }
 
-async fn backup_database(surreal: Arc<Surreal<Any>>) -> anyhow::Result<()> {
+#[instrument(skip_all)]
+async fn backup_database(
+    surreal: &DatabaseRootAccess,
+    backup_limit: &BackupLimit,
+) -> anyhow::Result<()> {
     let file_path = calc_backup_file_name();
 
     let target_file = File::create(file_path.clone())?;
-    let file_name = write_backup(&*surreal, target_file).await?;
+    let _ = write_backup(surreal, target_file).await?;
     info!(
-        "Database backup written to: {}",
-        file_path.file_name().unwrap().to_str().unwrap().to_string()
+        "database backup written to: {:?}",
+        file_path.file_name().ok_or(anyhow!("no filename"))?
     );
-    let file_names = get_backup_names().await?;
-    constraint_backups(file_names)?;
+
+    match constraint_backups(backup_limit).await {
+        Ok(backups_deleted) => {
+            if backups_deleted > 0 {
+                info!(
+                    amount = backups_deleted,
+                    "previous database backups were deleted according to limit"
+                );
+            }
+        }
+        Err(err) => {
+            error!(err = err.to_string(), "enforcing backup limits failed");
+        }
+    }
 
     Ok(())
 }
 
-async fn write_backup<C: Connection, W: Write>(
-    surreal: &Surreal<C>,
+async fn write_backup<W: Write + Send + 'static>(
+    db: &DatabaseRootAccess,
     writer: W,
 ) -> anyhow::Result<W> {
-    let mut export_stream = surreal.export(()).await?;
-    let mut compression_encoder = GzEncoder::new(writer, Compression::best());
+    let (sender, mut receiver) = async_channel::bounded::<Vec<u8>>(10_000);
+    let write_task = run_catch(async move {
+        let mut compression_encoder = GzEncoder::new(writer, Compression::best());
 
-    while let Some(result) = export_stream.next().await {
-        match result {
-            Ok(bytes) => {
-                compression_encoder.write_all(&bytes)?;
-            }
-            Err(err) => {
-                bail!(err);
-            }
+        while let Some(bytes) = receiver.next().await {
+            compression_encoder.write_all(&bytes)?;
         }
-    }
 
-    compression_encoder.try_finish()?;
-    let writer = compression_encoder.finish()?;
-    Ok(writer)
+        compression_encoder.try_finish()?;
+        Ok(compression_encoder.finish()?)
+    });
+
+    db.export(sender).await?;
+    let task_output = write_task.await?;
+    Ok(task_output)
 }
 
 fn calc_backup_file_name() -> PathBuf {
@@ -99,24 +121,25 @@ fn calc_backup_file_name() -> PathBuf {
     let time = now.format("%Y%m%d%H%M%S").to_string();
     let file_name = format!("backup_{time}");
 
-    let mut file_path = Path::new("backup").join(file_name.clone());
-    file_path.set_extension(".gzip");
+    let mut file_path = Path::new("backups").join(file_name.clone());
+    file_path.set_extension("gz");
     file_path
 }
 
-async fn get_backup_names() -> anyhow::Result<Vec<String>> {
-    let mut valid_filenames = Path::new("backup/")
+async fn get_backup_paths() -> anyhow::Result<Vec<PathBuf>> {
+    let mut valid_filenames = Path::new("backups/")
         .read_dir()?
         .filter_map(|entry| match entry {
             Ok(entry) => {
-                let filename = entry.file_name();
-                if !filename.to_str().unwrap().starts_with("backup_") {
+                let file_path = entry.path();
+                let file_name = file_path.file_name()?;
+                if !file_name.to_str()?.starts_with("backup_") {
                     return None;
                 }
-                filename.into_string().ok()
+                Some(file_path)
             }
             Err(err) => {
-                trace!(info = err.to_string(), "Backup dir entry error");
+                warn!(err = err.to_string(), "backup dir entry error");
                 None
             }
         })
@@ -125,12 +148,29 @@ async fn get_backup_names() -> anyhow::Result<Vec<String>> {
     Ok(valid_filenames)
 }
 
-fn constraint_backups(file_names: Vec<String>) -> anyhow::Result<()> {
-    if file_names.len() > GLOBAL_CONFIG.backup_max_amount {
-        if let Some(file_name) = file_names.first() {
-            info!("Delete backup with name: {file_name}");
-            remove_file(Path::new("backup").join(file_name).with_extension("gzip"))?;
+/// Ensures the backup limits are respected
+async fn constraint_backups(limit: &BackupLimit) -> anyhow::Result<u32> {
+    let mut count = 0;
+    let mut paths = VecDeque::from(get_backup_paths().await?);
+    while limit.check_exceeded(paths.make_contiguous()) {
+        if paths.len() > 1 {
+            warn!("latest backup should be deleted according to limit, ignoring...");
+            break;
         }
+
+        delete_oldest_backup(&mut paths).await?;
+        count += 1;
+    }
+
+    Ok(count)
+}
+
+async fn delete_oldest_backup(paths: &mut VecDeque<PathBuf>) -> anyhow::Result<()> {
+    let backup_path = paths.pop_front();
+    if let Some(path) = backup_path {
+        tokio::fs::remove_file(path).await?;
+    } else {
+        bail!("no backup remaining to delete");
     }
 
     Ok(())
