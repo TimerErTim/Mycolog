@@ -75,7 +75,7 @@ impl<'a, S: Auth> Query<'a, S> {
         let name = param_name.as_ref();
         match to_value(value) {
             Ok(value) => {
-                let mut params = self.params.get_or_insert_default();
+                let params = self.params.get_or_insert_default();
                 params.insert(name.to_string(), value);
             }
             Err(err) => {
