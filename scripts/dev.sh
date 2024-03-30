@@ -4,4 +4,4 @@
 scriptdir="$(dirname "$0")"
 cd "$scriptdir" && cd ../ || exit;
 
-cd working_dir/ && cargo +nightly -Z unstable-options -C ../backend/ run --bin mycolog --features dev-env;
+cd working_dir/ && cargo +nightly -Z unstable-options run --manifest-path ../backend/Cargo.toml --bin mycolog --features dev-env;
