@@ -3,6 +3,7 @@ name = "mycolog"
 version = "0.1.0"
 description = "Web application backend for logging and analyizing mushroom cultivation and general mycology"
 edition = "2021"
+authors = ["TimerErTim"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -36,13 +37,15 @@ toml = "0.8.10"
 
 # QoL
 cfg-if = "1.0.0"
-anyhow = "1.0.80"
+anyhow = { version = "1.0.80" }
 lazy_static = "1.4.0"
 clap = { version = "4.0.0", features = ["derive"] }
+email-address-parser = "2.0.0"
+regex = "1.10.4"
 
 [features]
-"dev-env" = ["surrealdb/kv-mem"]
-"prod-env" = ["surrealdb/kv-rocksdb"]
+"dev-env" = ["surrealdb-core/kv-mem"]
+"prod-env" = ["surrealdb-core/kv-speedb"]
 
 
 [profile.dev]
