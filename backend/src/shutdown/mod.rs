@@ -1,32 +1,17 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
-use tracing::error;
+use tracing::log::info;
+use tracing::{error, instrument, warn};
 
-use crate::application::MycologContext;
+use crate::context::MycologContext;
 
-pub type ExitMessage = i32;
+pub mod exit;
 
-lazy_static! {
-    static ref EXIT_CHANNEL: (Sender<ExitMessage>, Mutex<Option<Receiver<ExitMessage>>>) = {
-        let (send, recv) = tokio::sync::mpsc::channel(1);
-        (send, Mutex::new(Some(recv)))
-    };
-}
-
-pub async fn init_exit(error_code: i32) -> anyhow::Result<()> {
-    EXIT_CHANNEL.0.send(error_code).await?;
-    Ok(())
-}
-
-pub fn take_exit_recevier() -> Option<Receiver<ExitMessage>> {
-    let mut receiver_guard = EXIT_CHANNEL.1.lock().ok()?;
-    receiver_guard.take()
-}
-
-pub async fn shutdown(state: MycologContext) -> i32 {
+#[instrument(skip_all)]
+pub async fn shutdown(state: Arc<MycologContext>) -> i32 {
     let shutdown_result = try_shutdown(state).await;
 
     match shutdown_result {
@@ -38,9 +23,21 @@ pub async fn shutdown(state: MycologContext) -> i32 {
     }
 }
 
-pub async fn try_shutdown(state: MycologContext) -> anyhow::Result<()> {
-    state.task_cancel_token.cancel();
-    state.tasks.wait().await;
+pub async fn try_shutdown(context: Arc<MycologContext>) -> anyhow::Result<()> {
+    context.task_cancel_token.cancel();
+    info!("waiting for background tasks to quit...");
+    context.tasks.close();
+    context.tasks.wait().await;
+    info!("quitted all background tasks");
+
+    match Arc::into_inner(context) {
+        None => {
+            warn!("some threads still made use of global context");
+        }
+        Some(context) => {
+            drop(context);
+        }
+    };
 
     Ok(())
 }

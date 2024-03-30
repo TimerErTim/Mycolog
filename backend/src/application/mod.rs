@@ -1,47 +1,46 @@
 use std::future::Future;
+use std::sync::Arc;
 
 use tokio_util::task::TaskTracker;
 use tracing_log::log::info;
 
-pub use backups::start_backup_task;
-pub use context::MycologContext;
+use backups::backup_task;
+pub use backups::BackupLimit;
+pub use database::create_database_system;
+pub use database::DatabaseSystem;
 
-use crate::application::result::MycologResult;
+use crate::context::MycologContext;
 use crate::utils::asynchronous::run_catch;
 
 mod backups;
-mod context;
 mod database;
 mod email;
-mod result;
 mod web;
 
-pub async fn run_application(state: &mut MycologContext) -> i32 {
+pub async fn run_application(state: &Arc<MycologContext>) -> i32 {
     info!("Application running now...");
-    Ok(());
 
-    let application_result = run_catch(try_start_application(state)).await;
+    let application_result = run_catch(try_start_application(Arc::clone(state))).await;
     if let Err(err) = application_result {
-        return MycologResult {
-            exit_code: 1,
-            error: Some(err),
-        };
+        return 1;
     }
 
+    let mut exit_receiver = state.exit_receiver.lock().await;
     tokio::select! {
         _ = tokio::signal::ctrl_c() => 0,
-        message = state.exit_receiver.recv() => if let Some((exit_code, error)) = message {
+        message = exit_receiver.recv() => if let Some(exit_code) = message {
             exit_code
         } else {
             1
         }
-    };
+    }
 }
 
-pub async fn try_start_application(state: &mut MycologContext) -> anyhow::Result<()> {
-    let tasks = TaskTracker::new();
+pub async fn try_start_application(context: Arc<MycologContext>) -> anyhow::Result<()> {
+    let tasks = &context.tasks;
 
-    tasks.spawn(start_backup_task(state));
+    tasks.spawn(backup_task(Arc::clone(&context)));
+    info!("started backup service");
 
     Ok(())
 }

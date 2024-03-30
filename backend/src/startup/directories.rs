@@ -1,5 +1,5 @@
 use std::fs::create_dir_all;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use tracing::{info_span, warn};
 
@@ -19,19 +19,20 @@ fn create_application_dirs() -> anyhow::Result<()> {
 
 fn check_application_dirs() -> anyhow::Result<()> {
     check_dir_all("log/")?;
+    check_dir_all("migrations/")?;
     check_dir_all("site/")?;
     check_dir_all("secrets/")?;
     check_dir_all("config/")?;
     Ok(())
 }
 
-fn check_dir_all(path: impl Into<Path>) -> anyhow::Result<bool> {
+fn check_dir_all(path: impl Into<PathBuf>) -> anyhow::Result<bool> {
     let path = path.into();
-    let _span = info_span!("checking_directory", directory = path).entered();
+    let _span = info_span!("checking_directory", directory = %path.display()).entered();
 
     if !path.is_dir() {
         warn!(
-            dir = path,
+            dir = %path.display(),
             "Directory is missing but required for application"
         );
         return Ok(false);
