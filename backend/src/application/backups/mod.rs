@@ -35,6 +35,8 @@ async fn backup_service(
     db: DatabaseRootAccess,
     shutdown_token: CancellationToken,
 ) {
+    info!("started backup service");
+
     // Initial delay
     let delay_duration = Duration::from_secs(config.backup_delay_hours * 3600);
     tokio::select! {
