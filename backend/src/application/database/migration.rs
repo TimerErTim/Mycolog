@@ -7,6 +7,7 @@ use regex::Regex;
 use surrealdb_core::sql::{Datetime, Number, Object, Statements, Value};
 use tracing::{debug, error, info, warn};
 
+use crate::application::database::file::load_surql_file;
 use crate::application::database::DatabaseRootAccess;
 use crate::utils::types::GenericTryInto;
 
@@ -132,28 +133,13 @@ impl MigrationManager {
     }
 }
 
-async fn load_schema_file(path: impl Into<PathBuf>) -> anyhow::Result<SchemaFile> {
-    let folder = path.into();
+async fn load_schema_file(folder: impl Into<PathBuf>) -> anyhow::Result<SchemaFile> {
+    let folder = folder.into();
     let schema_file = folder.join("schema.surql");
-    let content = tokio::fs::read_to_string(&schema_file)
-        .await
-        .map_err(|err| {
-            anyhow!(
-                "failed reading content of {}: {:?}",
-                schema_file.display(),
-                err
-            )
-        })?;
-    let query = surrealdb_core::sql::parse(&content).map_err(|err| {
-        anyhow!(
-            "sql file {} contains invalid statements: {:?}",
-            schema_file.display(),
-            err
-        )
-    })?;
+    let sql_file = load_surql_file(schema_file).await?;
 
     Ok(SchemaFile {
-        statements: query.0,
+        statements: sql_file.statements,
     })
 }
 
@@ -209,23 +195,10 @@ async fn load_migration_files(path: impl Into<PathBuf>) -> anyhow::Result<Vec<Mi
         };
         let number = usize::from_str(number_match.as_str())?;
 
-        let content = tokio::fs::read_to_string(&file_path).await.map_err(|err| {
-            anyhow!(
-                "failed reading content of {}: {:?}",
-                file_path.display(),
-                err
-            )
-        })?;
-        let query = surrealdb_core::sql::parse(&content).map_err(|err| {
-            anyhow!(
-                "migration file {} contains invalid statements: {:?}",
-                file_path.display(),
-                err
-            )
-        })?;
+        let surql_file = load_surql_file(file_path).await?;
 
         migration_files.push(MigrationFile {
-            statements: query.0,
+            statements: surql_file.statements,
             file_name,
             number,
         });
