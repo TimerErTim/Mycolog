@@ -11,5 +11,5 @@ scripts/build.sh \
 && cd ../ \
 && mkdir -p build/site \
 && cp -r frontend/build/* build/site/ \
-&& cp -r scripts/run.sh working_dir/secrets working_dir/migrations build/;
+&& cp -r scripts/run.sh working_dir/secrets working_dir/migrations working_dir/schedules build/;
 
