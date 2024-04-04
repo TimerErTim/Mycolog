@@ -1,11 +1,11 @@
+[email]
+noreply_sender = "noreply@example.com"
+
 [web]
 ip = "127.0.0.1"
-port = "8031"
-
-[email]
-noreply_sender = "noreply@mycolog.net"
+port = 8031
 
 [backups]
-delay_hours = 24
-interval_hours = 24
+delay_hours = 0
+interval_hours = 1
 max_amount = 15
