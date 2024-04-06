@@ -20,6 +20,7 @@ fn create_application_dirs() -> anyhow::Result<()> {
 fn check_application_dirs() -> anyhow::Result<()> {
     check_dir_all("log/")?;
     check_dir_all("migrations/")?;
+    check_dir_all("schedules/")?;
     check_dir_all("site/")?;
     check_dir_all("secrets/")?;
     check_dir_all("config/")?;
