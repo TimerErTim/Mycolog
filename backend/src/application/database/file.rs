@@ -17,6 +17,12 @@ pub async fn load_surql_file(path: impl Borrow<PathBuf>) -> anyhow::Result<SqlFi
             err
         )
     })?;
+    if content.trim().is_empty() {
+        return Ok(SqlFile {
+            statements: Statements(Vec::new()),
+        });
+    }
+
     let query = surrealdb_core::sql::parse(&content).map_err(|err| {
         anyhow!(
             "surql file {} contains invalid statements: {:?}",
