@@ -3,7 +3,7 @@ use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
-use crate::application::DatabaseSystem;
+use crate::application::{DatabaseSystem, ScheduleQueries};
 use crate::config::MycologConfig;
 use crate::secrets::MycologSecrets;
 use crate::shutdown::exit::ExitMessage;
@@ -13,6 +13,7 @@ pub struct MycologContext {
     pub secrets: MycologSecrets,
 
     pub db: DatabaseSystem,
+    pub schedules: ScheduleQueries,
 
     pub tasks: TaskTracker,
 
