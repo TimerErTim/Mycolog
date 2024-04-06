@@ -2,6 +2,7 @@ use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::task::JoinHandle;
 
 pub type ExitMessage = i32;
 
@@ -12,9 +13,8 @@ lazy_static! {
     };
 }
 
-pub async fn init_exit(error_code: i32) -> anyhow::Result<()> {
-    EXIT_CHANNEL.0.send(error_code).await?;
-    Ok(())
+pub fn init_exit(error_code: i32) -> JoinHandle<anyhow::Result<()>> {
+    tokio::spawn(async move { Ok(EXIT_CHANNEL.0.send(error_code).await?) })
 }
 
 pub fn take_exit_recevier() -> Option<Receiver<ExitMessage>> {
