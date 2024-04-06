@@ -9,7 +9,7 @@ use chrono::Local;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use futures_lite::StreamExt;
-use tokio::time::{interval, sleep, MissedTickBehavior};
+use tokio::time::{interval, interval_at, sleep, Instant, MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, instrument, warn};
 
@@ -22,27 +22,22 @@ pub async fn backup_service(
     config: &MycologConfig,
     db: DatabaseRootAccess,
     shutdown_token: CancellationToken,
-) {
+) -> anyhow::Result<()> {
     info!("started backup service");
 
     // Initial delay
     let delay_duration = Duration::from_secs(config.backup_delay_hours * 3600);
-    tokio::select! {
-        _ = shutdown_token.cancelled() => {
-            info!("quitting backup service before initial delay...");
-        }
-        _ = sleep(delay_duration) => { }
-    }
 
     // Frequency
-    let mut interval = interval(Duration::from_secs(config.backup_interval_hours * 3600));
+    let mut interval = interval_at(
+        Instant::now() + delay_duration,
+        Duration::from_secs(config.backup_interval_hours * 3600),
+    );
     interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
     while !shutdown_token.is_cancelled() {
         tokio::select! {
-            _ = shutdown_token.cancelled() => {
-                info!("quitting backup service...");
-            }
+            _ = shutdown_token.cancelled() => break,
             _ = interval.tick() => {
                 info!("backing up database...");
                 let backup_result = backup_database(&db, &config.backup_limit).await;
