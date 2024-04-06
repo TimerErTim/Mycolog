@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::Read;
 use std::process::exit;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use serde::{Deserialize, Serialize};
 use toml::from_str;
 use tracing::{error, instrument};
@@ -22,11 +22,17 @@ pub fn parse_secrets() -> MycologSecrets {
 }
 
 pub fn try_parse_secrets() -> anyhow::Result<MycologSecrets> {
-    let keys_file = try_read_secrets_keys()?;
+    let mut keys_file = try_read_secrets_keys()?;
     let db_file = try_read_secrets_db()?;
 
-    let mailersend = keys_file.mailersend.ok_or(anyhow!(
-        "key for `mailersend` in secrets/keys.toml is missing"
+    let Some(mailersend_file) = keys_file.mailersend else {
+        bail!("no section for `mailersend` in secrets/keys.toml");
+    };
+    let mailersend_api = mailersend_file.api_key.ok_or(anyhow!(
+        "value for `mailersend.api_key` in secrets/keys.toml is missing"
+    ))?;
+    let mailersend_webhook = mailersend_file.webhook_signature.ok_or(anyhow!(
+        "value for `mailersend.webhook_signature` in secrets/keys.toml is missing"
     ))?;
 
     let db_user = db_file
@@ -37,7 +43,10 @@ pub fn try_parse_secrets() -> anyhow::Result<MycologSecrets> {
     ))?;
 
     Ok(MycologSecrets {
-        keys: SecretsKeys { mailersend },
+        keys: SecretsKeys {
+            mailersend_api,
+            mailersend_webhook,
+        },
         db: SecretsDb {
             user: db_user,
             password: db_password,
@@ -67,19 +76,25 @@ pub struct MycologSecrets {
 
 #[derive(Clone)]
 pub struct SecretsKeys {
-    mailersend: String,
+    mailersend_api: String,
+    mailersend_webhook: String,
 }
 
 impl SecretsKeys {
-    pub fn mailersend(&self) -> String {
-        self.mailersend.clone()
+    pub fn mailersend_api(&self) -> String {
+        self.mailersend_api.clone()
+    }
+
+    pub fn mailersend_webhook(&self) -> String {
+        self.mailersend_webhook.clone()
     }
 }
 
 impl Debug for SecretsKeys {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SecretsKeys")
-            .field("mailersend", &"?")
+            .field("mailersend_api", &"?")
+            .field("mailersend_webhook", &"?")
             .finish()
     }
 }
@@ -111,7 +126,13 @@ impl Debug for SecretsDb {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct SecretsKeysFile {
-    mailersend: Option<String>,
+    mailersend: Option<KeysFileMailersend>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct KeysFileMailersend {
+    api_key: Option<String>,
+    webhook_signature: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
