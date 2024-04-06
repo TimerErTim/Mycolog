@@ -204,8 +204,8 @@ impl From<&MycologConfig> for ConfigFile {
 #[derive(Clone, Debug)]
 pub struct MycologConfig {
     // Web
-    web_bind_ip: IpAddr,
-    web_bind_port: u16,
+    pub web_bind_ip: IpAddr,
+    pub web_bind_port: u16,
 
     // Email
     email_noreply_sender: String,
