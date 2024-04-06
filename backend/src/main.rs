@@ -27,5 +27,5 @@ async fn main() {
     let application_code = run_application(&context).await;
     let shutdown_code = shutdown(context).await;
 
-    exit(application_code << 4 & shutdown_code);
+    exit(application_code << 8 & shutdown_code);
 }
