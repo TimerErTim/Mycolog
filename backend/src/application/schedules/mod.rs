@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use surrealdb_core::sql::Statements;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use crate::application::database::load_surql_file;
 use crate::application::schedules::service::schedule_service;
@@ -53,7 +53,12 @@ pub async fn load_schedule_queries(folder: impl Into<PathBuf>) -> anyhow::Result
 pub async fn schedule_task(context: Arc<MycologContext>) {
     let db = context.db.auth_root();
     let shutdown_token = context.task_cancel_token.clone();
+
     if let Err(err) = schedule_service(db, &context.schedules, shutdown_token).await {
-        error!(?err, "database schedule task stopped working due to error")
+        error!(
+            ?err,
+            "database schedule service stopped working due to error"
+        )
     }
+    info!("stopped database schedule service");
 }

@@ -47,6 +47,8 @@ pub async fn backup_service(
             }
         }
     }
+
+    Ok(())
 }
 
 #[instrument(skip_all)]
@@ -138,8 +140,8 @@ async fn constraint_backups(limit: &BackupLimit) -> anyhow::Result<u32> {
     let mut count = 0;
     let mut paths = VecDeque::from(get_backup_paths().await?);
     while limit.check_exceeded(paths.make_contiguous()) {
-        if paths.len() > 1 {
-            warn!("latest backup should be deleted according to limit, ignoring...");
+        if paths.len() <= 1 {
+            warn!("only backup should be deleted according to limit, ignoring...");
             break;
         }
 

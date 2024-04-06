@@ -1,8 +1,9 @@
+use std::future::IntoFuture;
 use std::time::Duration;
 
 use tokio::time::{interval, Interval};
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, info_span, Instrument};
 
 use crate::application::database::DatabaseRootAccess;
 use crate::application::ScheduleQueries;
@@ -28,19 +29,23 @@ pub async fn schedule_service(
             continue;
         };
         info!(schedule, "executing database query...");
-        let responses = match db.query(statements.clone()).await {
+        let responses = match db
+            .query(statements.clone())
+            .into_future()
+            .instrument(info_span!("schedule_query", schedule))
+            .await
+        {
             Ok(responses) => responses,
             Err(err) => {
-                error!(?err, schedule, "query for database failed");
+                error!(schedule, ?err, "query for database failed");
                 continue;
             }
         };
         if let Err(err) = responses.check() {
-            error!(?err, schedule, "query for database responded with error");
+            error!(schedule, ?err, "query for database responded with error");
             continue;
         }
         info!(schedule, "successfully executed database query");
     }
-    info!("stopped schedule service");
     Ok(())
 }

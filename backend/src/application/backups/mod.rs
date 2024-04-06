@@ -3,7 +3,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use futures_lite::stream::StreamExt;
-use tracing::Instrument;
+use tracing::{error, info, Instrument};
 
 pub use crate::application::backups::limits::BackupLimit;
 use crate::application::backups::service::backup_service;
@@ -15,5 +15,8 @@ mod service;
 pub async fn backup_task(context: Arc<MycologContext>) {
     let db = context.db.auth_root();
     let shutdown_token = context.task_cancel_token.clone();
-    backup_service(&context.config, db, shutdown_token).await;
+    if let Err(err) = backup_service(&context.config, db, shutdown_token).await {
+        error!(?err, "database backup service crashed");
+    }
+    info!("stopped database backup service");
 }
