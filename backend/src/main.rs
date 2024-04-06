@@ -1,6 +1,7 @@
 #![feature(let_chains)]
 #![feature(try_blocks)]
 #![feature(option_get_or_insert_default)]
+#![feature(duration_constructors)]
 
 use std::process::exit;
 
