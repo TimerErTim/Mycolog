@@ -17,7 +17,7 @@ pub fn setup_logging() -> Result<(), TryInitError> {
             .try_init()
     } else if cfg!(feature = "prod-env") {
         builder
-            .with_max_level(Level::INFO)
+            .with_max_level(Level::DEBUG)
             .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
             .with_ansi(false)
             .finish()
