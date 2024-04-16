@@ -14,7 +14,6 @@ use tracing::{error, instrument, warn};
 use crate::application::BackupLimit;
 use crate::cli::MycologArguments;
 
-#[instrument]
 pub fn parse_config(arguments: MycologArguments) -> MycologConfig {
     match try_parse_config(arguments) {
         Ok(config) => config,
@@ -208,7 +207,7 @@ pub struct MycologConfig {
     pub web_bind_port: u16,
 
     // Email
-    email_noreply_sender: String,
+    pub email_noreply_sender: String,
 
     // Backups
     pub backup_delay_hours: u64,
