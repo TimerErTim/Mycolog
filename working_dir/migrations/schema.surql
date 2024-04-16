@@ -17,6 +17,13 @@ OPTION IMPORT;
 DEFINE PARAM $SCHEMA_VERSION VALUE '0.0.1' PERMISSIONS FULL;
 
 -- ------------------------------
+-- FUNCTIONS
+-- ------------------------------
+DEFINE FUNCTION fn::create_verification_link($user: record<user>) {
+    RETURN CREATE ONLY verification_link SET user = $user, token = rand::uuid();
+};
+
+-- ------------------------------
 -- TABLE: email
 -- ------------------------------
 
@@ -55,10 +62,22 @@ DEFINE TABLE user SCHEMAFULL PERMISSIONS FOR select, update, delete WHERE id = $
 DEFINE FIELD email ON user TYPE string ASSERT string::is::email($after) PERMISSIONS FOR select, update FULL, FOR create, delete NONE;
 DEFINE FIELD is_locked ON user TYPE bool DEFAULT false PERMISSIONS FOR select FULL, FOR create, update, delete NONE;
 DEFINE FIELD is_verified ON user TYPE bool DEFAULT false PERMISSIONS FOR select FULL, FOR create, update, delete NONE;
-DEFINE FIELD password ON user TYPE string VALUE crypto::argon2::generate($after) PERMISSIONS FULL;
+DEFINE FIELD password ON user TYPE string VALUE crypto::argon2::generate($after) PERMISSIONS NONE;
 DEFINE FIELD time_registered ON user TYPE datetime DEFAULT time::now() PERMISSIONS FOR select FULL, FOR create, update, delete NONE;
 
 DEFINE INDEX email_unique ON user FIELDS email UNIQUE;
+
+-- ------------------------------
+-- TABLE: verification_link
+-- ------------------------------
+
+DEFINE TABLE verification_link SCHEMAFULL PERMISSIONS NONE;
+
+DEFINE FIELD token ON verification_link TYPE string PERMISSIONS FULL;
+DEFINE FIELD user ON verification_link TYPE record<user> PERMISSIONS FULL;
+DEFINE FIELD time_created ON verification_link TYPE datetime DEFAULT time::now() PERMISSIONS FULL;
+
+DEFINE INDEX token_unique ON verification_link FIELDS verification_link UNIQUE;
 
 -- ------------------------------
 -- SCOPE: user
@@ -67,3 +86,4 @@ DEFINE INDEX email_unique ON user FIELDS email UNIQUE;
 DEFINE SCOPE user SESSION 30d
     SIGNUP ( CREATE user SET email = $email, password = $password )
     SIGNIN ( SELECT * FROM user WHERE email = $email AND crypto::argon2::compare(password, $password) );
+
