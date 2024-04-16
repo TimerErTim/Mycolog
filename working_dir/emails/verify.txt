@@ -1,0 +1,4 @@
+Hello,
+
+You have registered at Mycolog using your email {email_addresse}.
+Click the following link to verify your account: {link}
