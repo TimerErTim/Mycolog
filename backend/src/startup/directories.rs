@@ -24,6 +24,7 @@ fn check_application_dirs() -> anyhow::Result<()> {
     check_dir_all("site/")?;
     check_dir_all("secrets/")?;
     check_dir_all("config/")?;
+    check_dir_all("emails/")?;
     Ok(())
 }
 
