@@ -1,15 +1,49 @@
 use anyhow::{anyhow, bail};
 use serde::de::DeserializeOwned;
-use surrealdb_core::dbs::Response;
+use serde::ser::SerializeStruct;
+use serde::{Serialize, Serializer};
 use surrealdb_core::sql::{from_value, Array, Value};
 
 use crate::application::database::system::opts::stats::{Stats, ToStats};
 
 #[derive(Debug)]
-pub struct Responses(pub(in super::super) Vec<Response>);
+pub struct Responses(pub(in super::super) Vec<surrealdb_core::dbs::Response>);
+
+pub struct Response {
+    pub time: String,
+    pub result: Result<Value, surrealdb_core::err::Error>,
+}
+
+impl From<surrealdb_core::dbs::Response> for Response {
+    fn from(value: surrealdb_core::dbs::Response) -> Self {
+        Self {
+            time: value.speed().to_string(),
+            result: value.result,
+        }
+    }
+}
+
+impl Serialize for Response {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut val = serializer.serialize_struct("Response", 2)?;
+        val.serialize_field("time", &self.time)?;
+        match &self.result {
+            Ok(v) => {
+                val.serialize_field("result", &v.clone().into_json())?;
+            }
+            Err(e) => {
+                val.serialize_field("error", &e.to_string())?;
+            }
+        }
+        val.end()
+    }
+}
 
 impl Responses {
-    pub fn new(responses: Vec<Response>) -> Self {
+    pub(in super::super) fn new(responses: Vec<surrealdb_core::dbs::Response>) -> Self {
         Self(responses)
     }
 
@@ -18,6 +52,13 @@ impl Responses {
             .get(index)
             .map(|response| response.result.as_ref().ok().cloned())
             .flatten()
+    }
+
+    pub fn collect(self) -> Vec<Response> {
+        self.0
+            .into_iter()
+            .map(|response| Response::from(response))
+            .collect()
     }
 }
 

@@ -10,6 +10,8 @@ authors = ["TimerErTim"]
 [dependencies]
 # Web server
 axum = { version = "0.7.5" }
+axum-extra = { version = "0.9.3", features = ["cookie"] }
+reqwest = { version = "0.12.3", features = ["json"] }
 
 # Data storage
 surrealdb-core = { version = "1.3.1", features = [], default-features = false }

@@ -24,9 +24,12 @@ impl DatabaseSystem {
         }
     }
 
-    pub async fn auth_token(&self, token: &AuthToken) -> anyhow::Result<DatabaseScopeAccess> {
+    pub async fn auth_token(
+        &self,
+        token: impl Into<AuthToken>,
+    ) -> anyhow::Result<DatabaseScopeAccess> {
         let mut session = Session::default();
-        iam::verify::token(&self.datastore, &mut session, token.as_insecure()).await?;
+        iam::verify::token(&self.datastore, &mut session, token.into().as_insecure()).await?;
 
         Ok(DatabaseAccess {
             datastore: Arc::clone(&self.datastore),
@@ -36,17 +39,19 @@ impl DatabaseSystem {
 
     pub async fn signin(&self, scope: &str, vars: impl Serialize) -> anyhow::Result<AuthToken> {
         let value = to_value(vars)?;
-        let Value::Object(vars) = value else {
+        let Value::Object(mut vars) = value else {
             error!(
                 ?value,
                 "provided vars in database signin were not an object"
             );
             bail!("provided vars in database signin were not an object")
         };
-
-        let maybe_token = surrealdb_core::iam::signin::signin(
+        let maybe_token = surrealdb_core::iam::signin::sc(
             &self.datastore,
-            &mut self.scope_template_session.clone().with_sc(scope),
+            &mut Session::default(),
+            self.scope_template_session.ns.as_ref().unwrap().clone(),
+            self.scope_template_session.db.as_ref().unwrap().clone(),
+            scope.to_string(),
             vars,
         )
         .await?;
@@ -58,17 +63,19 @@ impl DatabaseSystem {
 
     pub async fn signup(&self, scope: &str, vars: impl Serialize) -> anyhow::Result<AuthToken> {
         let value = to_value(vars)?;
-        let Value::Object(vars) = value else {
+        let Value::Object(mut vars) = value else {
             error!(
                 ?value,
                 "provided vars in database signup were not an object"
             );
             bail!("provided vars in database signup were not an object")
         };
-
-        let maybe_token = surrealdb_core::iam::signup::signup(
+        let maybe_token = surrealdb_core::iam::signup::sc(
             &self.datastore,
-            &mut self.scope_template_session.clone().with_sc(scope),
+            &mut Session::default(),
+            self.scope_template_session.ns.as_ref().unwrap().clone(),
+            self.scope_template_session.db.as_ref().unwrap().clone(),
+            scope.to_string(),
             vars,
         )
         .await?;
@@ -104,7 +111,7 @@ impl Auth for ScopeAuth {
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct AuthToken(String);
 
 impl Debug for AuthToken {
@@ -120,11 +127,11 @@ impl<S: Into<String>> From<S> for AuthToken {
 }
 
 impl AuthToken {
-    fn as_insecure(&self) -> &str {
+    pub fn as_insecure(&self) -> &str {
         &self.0
     }
 
-    fn to_insecore(&self) -> String {
+    pub fn to_insecure(&self) -> String {
         self.0.clone()
     }
 }

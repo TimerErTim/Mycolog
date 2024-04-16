@@ -5,8 +5,10 @@ use surrealdb_core::iam::signin;
 use surrealdb_core::kvs::Datastore;
 use tracing::{error, warn};
 
+pub use access::AuthToken;
 pub use access::DatabaseRootAccess;
 pub use access::DatabaseScopeAccess;
+pub use opts::{Response, Responses};
 
 use crate::application::database::system::access::{DatabaseAccess, RootAuth, ScopeAuth};
 
