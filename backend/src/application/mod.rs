@@ -9,6 +9,8 @@ use backups::backup_task;
 pub use backups::BackupLimit;
 pub use database::create_database_system;
 pub use database::DatabaseSystem;
+pub use email::create_email_manager;
+pub use email::EmailManager;
 pub use schedules::load_schedule_queries;
 pub use schedules::ScheduleQueries;
 

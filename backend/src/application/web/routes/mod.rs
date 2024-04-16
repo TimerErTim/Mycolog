@@ -10,7 +10,7 @@ use self::api::api_router;
 
 mod api;
 
-#[instrument(level = Level::DEBUG)]
+#[instrument(level = tracing::Level::DEBUG)]
 pub fn try_build_routes() -> anyhow::Result<Router<Arc<MycologContext>>> {
     run_catch_blocking(|| Ok(root_router()))
 }

@@ -6,11 +6,13 @@ use axum::body::{Body, Bytes};
 use axum::extract::{FromRequest, Request};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::RequestExt;
+use axum::{Json, RequestExt};
 use hmac::{Hmac, Mac};
 use image::EncodableLayout;
+use serde_json::Value;
 use sha2::Sha256;
 
+use crate::application::email::events::EmailWebhookEvent;
 use crate::application::web::error::ResponseError;
 use crate::application::web::error::ResponseErrorExt;
 use crate::context::MycologContext;
@@ -71,5 +73,19 @@ impl<S: AsRef<MycologSecrets> + Send + Sync, E: FromRequest<S, Rejection: IntoRe
             .map_err(ResponseError::from_response)?;
 
         Ok(Self(inner))
+    }
+}
+
+#[async_trait]
+impl<S: Send + Sync> FromRequest<S> for EmailWebhookEvent {
+    type Rejection = ResponseError;
+
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+        let Json(value) = Json::<Value>::from_request(req, state)
+            .await
+            .map_err(ResponseError::from_response)?;
+        let event = EmailWebhookEvent::try_from(value)
+            .map_err(|err: anyhow::Error| err.status(StatusCode::UNPROCESSABLE_ENTITY))?;
+        Ok(event)
     }
 }
