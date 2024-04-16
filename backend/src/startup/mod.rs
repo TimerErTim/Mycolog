@@ -6,7 +6,9 @@ use tokio::sync::Mutex;
 use tracing::{debug, error, info, instrument};
 use tracing_subscriber::util::SubscriberInitExt;
 
-use crate::application::{create_database_system, load_schedule_queries};
+use crate::application::{
+    create_database_system, create_email_manager, load_schedule_queries, EmailManager,
+};
 use crate::cli::MycologArguments;
 use crate::config::parse_config;
 use crate::context::MycologContext;
@@ -50,6 +52,7 @@ async fn build_context(arguments: MycologArguments) -> anyhow::Result<MycologCon
     let config = parse_config(arguments);
     let secrets = parse_secrets();
     let db = create_database_system(&config, &secrets).await?;
+    let email = create_email_manager(&config, &secrets, &db).await?;
     let schedules = load_schedule_queries("schedules/").await?;
 
     let exit_receiver =
@@ -60,6 +63,7 @@ async fn build_context(arguments: MycologArguments) -> anyhow::Result<MycologCon
         secrets,
         exit_receiver,
         db,
+        email,
         schedules,
         tasks: Default::default(),
         task_cancel_token: Default::default(),
