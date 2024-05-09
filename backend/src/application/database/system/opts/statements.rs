@@ -171,3 +171,9 @@ impl IntoStatements for String {
         parse(&self)?.into_statements()
     }
 }
+
+impl IntoStatements for () {
+    fn into_statements(self) -> anyhow::Result<Vec<Statement>> {
+        Ok(Vec::new())
+    }
+}
