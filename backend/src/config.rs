@@ -67,6 +67,22 @@ pub fn try_parse_config(arguments: MycologArguments) -> anyhow::Result<MycologCo
         default_config.email_noreply_sender
     };
 
+    let images_file = match &config_file.images {
+        Some(file) => file.clone(),
+        None => Default::default(),
+    };
+    let images_max_bytes_per_user =
+        if let Some(images_max_bytes_per_user) = images_file.max_bytes_per_user {
+            if images_max_bytes_per_user <= 0 {
+                bail!("`images.max_bytes_per_user` must be greater than 0");
+            }
+            images_max_bytes_per_user
+        } else {
+            warn!("`images.max_bytes_per_user` is is missing from config");
+            should_write_config = true;
+            default_config.images_max_bytes_per_user
+        };
+
     let backup_file = match &config_file.backups {
         Some(file) => file.clone(),
         None => Default::default(),
@@ -111,6 +127,7 @@ pub fn try_parse_config(arguments: MycologArguments) -> anyhow::Result<MycologCo
         web_bind_ip,
         web_bind_port,
         email_noreply_sender,
+        images_max_bytes_per_user,
         backup_delay_hours,
         backup_interval_hours,
         backup_limit,
@@ -153,6 +170,7 @@ impl Default for MycologConfig {
             web_bind_ip: IpAddr::from([127, 0, 0, 1]),
             web_bind_port: 8031,
             email_noreply_sender: "noreply@example.com".to_string(),
+            images_max_bytes_per_user: 2u64.pow(30), // 1GB,
             backup_delay_hours: 24,
             backup_interval_hours: 24,
             backup_limit: BackupLimit::MaxAmountBackups(7),
@@ -187,6 +205,9 @@ impl From<&MycologConfig> for ConfigFile {
             email: Some(EmailConfig {
                 noreply_sender: Some(value.email_noreply_sender.clone()),
             }),
+            images: Some(ImagesConfig {
+                max_bytes_per_user: Some(value.images_max_bytes_per_user),
+            }),
             web: Some(WebConfig {
                 ip: Some(value.web_bind_ip.to_string()),
                 port: Some(value.web_bind_port),
@@ -209,6 +230,9 @@ pub struct MycologConfig {
     // Email
     pub email_noreply_sender: String,
 
+    // Images
+    pub images_max_bytes_per_user: u64,
+
     // Backups
     pub backup_delay_hours: u64,
     pub backup_interval_hours: u64,
@@ -218,6 +242,7 @@ pub struct MycologConfig {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 struct ConfigFile {
     email: Option<EmailConfig>,
+    images: Option<ImagesConfig>,
     web: Option<WebConfig>,
     backups: Option<BackupConfig>,
 }
@@ -225,6 +250,11 @@ struct ConfigFile {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 struct EmailConfig {
     noreply_sender: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+struct ImagesConfig {
+    max_bytes_per_user: Option<u64>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
