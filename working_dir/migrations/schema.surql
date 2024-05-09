@@ -54,6 +54,24 @@ DEFINE FIELD time_opened ON email_sent_to TYPE option<datetime> PERMISSIONS FULL
 DEFINE INDEX recipient ON email_sent_to FIELDS recipient;
 
 -- ------------------------------
+-- TABLE: image
+-- ------------------------------
+
+DEFINE TABLE image SCHEMAFULL PERMISSIONS FOR update, delete, create NONE, FOR select WHERE owner = $auth.id;
+
+DEFINE FIELD path ON image TYPE string PERMISSIONS NONE;
+DEFINE FIELD file_name ON image TYPE string PERMISSIONS FULL;
+DEFINE FIELD file_type ON image TYPE string PERMISSIONS FULL;
+DEFINE FIELD file_size ON image TYPE int PERMISSIONS FULL;
+DEFINE FIELD dimensions ON image TYPE object PERMISSIONS FULL;
+DEFINE FIELD dimensions.width ON image TYPE int PERMISSIONS FULL;
+DEFINE FIELD dimensions.height ON image TYPE int PERMISSIONS FULL;
+DEFINE FIELD owner ON image TYPE record<user> DEFAULT $auth.id PERMISSIONS FULL;
+DEFINE FIELD time_created ON TABLE image TYPE datetime DEFAULT time::now() PERMISSIONS FULL;
+
+DEFINE INDEX path_unique ON image FIELDS path UNIQUE;
+
+-- ------------------------------
 -- TABLE: user
 -- ------------------------------
 

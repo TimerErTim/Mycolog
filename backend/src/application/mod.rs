@@ -11,6 +11,8 @@ pub use database::create_database_system;
 pub use database::DatabaseSystem;
 pub use email::create_email_manager;
 pub use email::EmailManager;
+pub use images::create_image_manager;
+pub use images::ImageManager;
 pub use schedules::load_schedule_queries;
 pub use schedules::ScheduleQueries;
 
@@ -22,6 +24,7 @@ use crate::utils::asynchronous::run_catch;
 mod backups;
 mod database;
 mod email;
+mod images;
 mod schedules;
 mod web;
 
