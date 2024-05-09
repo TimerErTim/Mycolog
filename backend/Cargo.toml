@@ -10,7 +10,8 @@ authors = ["TimerErTim"]
 [dependencies]
 # Web server
 axum = { version = "0.7.5" }
-axum-extra = { version = "0.9.3", features = ["cookie"] }
+axum-extra = { version = "0.9.3", features = ["cookie", "multipart"] }
+tower-http = { version = "0.5.2", features = ["fs"] }
 reqwest = { version = "0.12.3", features = ["json"] }
 
 # Data storage
@@ -35,6 +36,7 @@ chrono = "0.4.34"
 uuid = "1.7.0"
 serde = "1.0.197"
 serde_json = "1.0.114"
+serde-json-fmt = "0.1.0"
 toml = "0.8.10"
 
 # Cryptography
@@ -42,9 +44,12 @@ hmac = "0.12.1"
 sha2 = "0.10.8"
 hex = "0.4.3"
 
+# Error handling
+anyhow = { version = "1.0.80" }
+thiserror = { version = "1.0.59" }
+
 # QoL
 cfg-if = "1.0.0"
-anyhow = { version = "1.0.80" }
 lazy_static = "1.4.0"
 clap = { version = "4.0.0", features = ["derive"] }
 email-address-parser = "2.0.0"
