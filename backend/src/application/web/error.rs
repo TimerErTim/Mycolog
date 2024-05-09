@@ -1,3 +1,5 @@
+use std::fmt::{Debug, Display, Formatter};
+
 use anyhow::anyhow;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -19,10 +21,26 @@ impl ResponseError {
         };
         ResponseError(status, anyhow!(content))
     }
+
+    pub fn status(&self) -> StatusCode {
+        self.0.clone()
+    }
 }
 
 pub(crate) trait ResponseErrorExt {
-    fn status(self, code: impl Into<StatusCode>) -> ResponseError;
+    fn with_code(self, code: impl Into<StatusCode>) -> ResponseError;
+}
+
+impl Debug for ResponseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self.1, f)
+    }
+}
+
+impl Display for ResponseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.1, f)
+    }
 }
 
 impl IntoResponse for ResponseError {
@@ -38,7 +56,7 @@ impl<E: Into<anyhow::Error>> From<E> for ResponseError {
 }
 
 impl<E: Into<ResponseError>> ResponseErrorExt for E {
-    fn status(self, code: impl Into<StatusCode>) -> ResponseError {
+    fn with_code(self, code: impl Into<StatusCode>) -> ResponseError {
         let mut error = self.into();
         error.0 = code.into();
         error

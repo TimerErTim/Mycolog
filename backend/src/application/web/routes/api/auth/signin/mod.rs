@@ -18,7 +18,7 @@ use crate::context::MycologContext;
 
 mod data;
 
-pub fn signin_router() -> Router<Arc<MycologContext>> {
+pub fn signin_router(state: &Arc<MycologContext>) -> Router<Arc<MycologContext>> {
     Router::new().route("/", post(handle_signin))
 }
 
@@ -31,17 +31,17 @@ async fn handle_signin(
 ) -> ResponseResult<CookieJar> {
     if !EmailAddress::is_valid(&credentials.email, None) {
         return Err(
-            anyhow!("given email is no valid email addresse").status(StatusCode::BAD_REQUEST)
+            anyhow!("given email is no valid email addresse").with_code(StatusCode::BAD_REQUEST)
         );
     }
 
     debug!("received signin request");
     let token = context
         .db
-        .signin("user", credentials)
+        .signin("user", credentials.clone())
         .await
-        .map_err(|err| err.status(StatusCode::UNAUTHORIZED))?;
-    info!("approved signin request", email = ?credentials.email);
+        .map_err(|err| err.with_code(StatusCode::UNAUTHORIZED))?;
+    info!(email = ?credentials.email, "approved signin request");
 
     let cookie = build_auth_cookie(token, options.remember.unwrap_or(false));
     Ok(jar.add(cookie))

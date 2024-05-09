@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::serde::empty_string_as_none;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SigninCredentials {
     pub email: String,
     pub password: String,

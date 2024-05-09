@@ -8,6 +8,6 @@ use self::webhook::email_webhook_router;
 
 mod webhook;
 
-pub fn email_router() -> Router<Arc<MycologContext>> {
-    Router::new().nest("/webhook", email_webhook_router())
+pub fn email_router(context: &Arc<MycologContext>) -> Router<Arc<MycologContext>> {
+    Router::new().nest("/webhook", email_webhook_router(context))
 }

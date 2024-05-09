@@ -40,15 +40,15 @@ impl<S: AsRef<MycologSecrets> + Send + Sync, E: FromRequest<S, Rejection: IntoRe
         let signature_str = req_parts
             .headers
             .get("signature")
-            .ok_or(anyhow!("no `signature` header field").status(StatusCode::BAD_REQUEST))?
+            .ok_or(anyhow!("no `signature` header field").with_code(StatusCode::BAD_REQUEST))?
             .to_str()
             .map_err(|err| {
                 anyhow!("`signature` header field is no readable string: {:?}", err)
-                    .status(StatusCode::BAD_REQUEST)
+                    .with_code(StatusCode::BAD_REQUEST)
             })?;
         let expected_signature = hex::decode(signature_str).map_err(|err| {
             anyhow!("`signature` header field is no hex number: {:?}", err)
-                .status(StatusCode::BAD_REQUEST)
+                .with_code(StatusCode::BAD_REQUEST)
         })?;
         let body_bytes =
             Bytes::from_request(Request::from_parts(req_parts.clone(), req_body), state)
@@ -59,12 +59,12 @@ impl<S: AsRef<MycologSecrets> + Send + Sync, E: FromRequest<S, Rejection: IntoRe
             HmacSha256::new_from_slice(state.as_ref().keys.mailersend_webhook().as_bytes())
                 .map_err(|err| {
                     anyhow!("server defined invalid signing key: {:?}", err)
-                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .with_code(StatusCode::INTERNAL_SERVER_ERROR)
                 })?;
         hmac.update(&body_bytes);
         hmac.verify_slice(&expected_signature).map_err(|err| {
             anyhow!("`signature` header does not match content: {:?}", err)
-                .status(StatusCode::UNAUTHORIZED)
+                .with_code(StatusCode::UNAUTHORIZED)
         })?;
 
         let req = Request::from_parts(req_parts, Body::from(body_bytes));
@@ -85,7 +85,7 @@ impl<S: Send + Sync> FromRequest<S> for EmailWebhookEvent {
             .await
             .map_err(ResponseError::from_response)?;
         let event = EmailWebhookEvent::try_from(value)
-            .map_err(|err: anyhow::Error| err.status(StatusCode::UNPROCESSABLE_ENTITY))?;
+            .map_err(|err: anyhow::Error| err.with_code(StatusCode::UNPROCESSABLE_ENTITY))?;
         Ok(event)
     }
 }

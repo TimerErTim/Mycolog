@@ -17,7 +17,7 @@ use crate::context::MycologContext;
 mod events;
 mod extractors;
 
-pub fn email_webhook_router() -> Router<Arc<MycologContext>> {
+pub fn email_webhook_router(context: &Arc<MycologContext>) -> Router<Arc<MycologContext>> {
     Router::new().route("/", post(handle_webhook_request))
 }
 

@@ -20,7 +20,7 @@ pub async fn web_server_service(
     let listener = TcpListener::bind(socket)
         .await
         .inspect_err(|err| error!(?err, "unable to bind web server address"))?;
-    let routes = try_build_routes()?;
+    let routes = try_build_routes(&context)?;
 
     run_web_server(listener, shutdown_token, routes.with_state(context)).await
 }

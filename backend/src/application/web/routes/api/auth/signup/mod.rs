@@ -18,7 +18,7 @@ use crate::context::MycologContext;
 
 mod data;
 
-pub fn signup_router() -> Router<Arc<MycologContext>> {
+pub fn signup_router(state: &Arc<MycologContext>) -> Router<Arc<MycologContext>> {
     Router::new().route("/", post(handle_signup))
 }
 
@@ -31,16 +31,16 @@ async fn handle_signup(
     let email = credentials.email.clone();
     if !EmailAddress::is_valid(&email, None) {
         return Err(
-            anyhow!("given email is no valid email addresse").status(StatusCode::BAD_REQUEST)
+            anyhow!("given email is no valid email addresse").with_code(StatusCode::BAD_REQUEST)
         );
     }
 
     debug!("received signup request");
     let token = context
         .db
-        .signup("user", credentials)
+        .signup("user", credentials.clone())
         .await
-        .map_err(|err| err.status(StatusCode::UNAUTHORIZED))?;
+        .map_err(|err| err.with_code(StatusCode::UNAUTHORIZED))?;
     /*tokio::spawn(async move {
         if let Err(err) = context.email.sumbit_email(
             "verify",
@@ -49,7 +49,7 @@ async fn handle_signup(
             error!(?err, recipient = %email, "unable to submit verification email");
         }
     });*/
-    info!("approved signup request", email = ?credentials.email);
+    info!(email = ?credentials.email, "approved signup request");
 
     let cookie = build_auth_cookie(token, false);
     Ok(jar.add(cookie))

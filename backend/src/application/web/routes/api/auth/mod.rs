@@ -11,8 +11,8 @@ mod signin;
 mod signup;
 mod token;
 
-pub fn auth_router() -> Router<Arc<MycologContext>> {
+pub fn auth_router(context: &Arc<MycologContext>) -> Router<Arc<MycologContext>> {
     Router::new()
-        .nest("/signup", signup_router())
-        .nest("/signin", signin_router())
+        .nest("/signup", signup_router(context))
+        .nest("/signin", signin_router(context))
 }
