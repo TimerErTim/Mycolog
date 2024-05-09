@@ -24,6 +24,7 @@ pub fn parse_secrets() -> MycologSecrets {
 pub fn try_parse_secrets() -> anyhow::Result<MycologSecrets> {
     let mut keys_file = try_read_secrets_keys()?;
     let db_file = try_read_secrets_db()?;
+    let admin_file = try_read_secrets_admin()?;
 
     let Some(mailersend_file) = keys_file.mailersend else {
         bail!("no section for `mailersend` in secrets/keys.toml");
@@ -42,6 +43,15 @@ pub fn try_parse_secrets() -> anyhow::Result<MycologSecrets> {
         "password for `password` in secrets/db.toml is missing"
     ))?;
 
+    let admin_token = admin_file
+        .token
+        .ok_or(anyhow!(
+            "value for `token` in secrets/admin.toml is missing"
+        ))?
+        .chars()
+        .filter(|c| c.is_ascii())
+        .collect::<String>();
+
     Ok(MycologSecrets {
         keys: SecretsKeys {
             mailersend_api,
@@ -51,6 +61,7 @@ pub fn try_parse_secrets() -> anyhow::Result<MycologSecrets> {
             user: db_user,
             password: db_password,
         },
+        admin: SecretsAdmin { token: admin_token },
     })
 }
 
@@ -68,10 +79,18 @@ fn try_read_secrets_db() -> anyhow::Result<SecretsDbFile> {
     Ok(from_str(&read_db_file)?)
 }
 
+fn try_read_secrets_admin() -> anyhow::Result<SecretsAdminFile> {
+    let mut admin_file = File::open("secrets/admin.toml")?;
+    let mut read_admin_file = String::new();
+    admin_file.read_to_string(&mut read_admin_file)?;
+    Ok(from_str(&read_admin_file)?)
+}
+
 #[derive(Clone, Debug)]
 pub struct MycologSecrets {
     pub keys: SecretsKeys,
     pub db: SecretsDb,
+    pub admin: SecretsAdmin,
 }
 
 #[derive(Clone)]
@@ -124,19 +143,41 @@ impl Debug for SecretsDb {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone)]
+pub struct SecretsAdmin {
+    token: String,
+}
+
+impl SecretsAdmin {
+    pub fn token(&self) -> String {
+        self.token.clone()
+    }
+}
+
+impl Debug for SecretsAdmin {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SecretsAdmin").field("token", &"?").finish()
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 struct SecretsKeysFile {
     mailersend: Option<KeysFileMailersend>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct KeysFileMailersend {
     api_key: Option<String>,
     webhook_signature: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct SecretsDbFile {
     user: Option<String>,
     password: Option<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct SecretsAdminFile {
+    token: Option<String>,
 }
