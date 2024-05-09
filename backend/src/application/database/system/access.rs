@@ -16,6 +16,20 @@ use crate::context::MycologContext;
 pub type DatabaseRootAccess = DatabaseAccess<RootAuth>;
 pub type DatabaseScopeAccess = DatabaseAccess<ScopeAuth>;
 
+pub struct DatabaseAccess<S: Auth> {
+    pub(super) auth: S,
+    pub(super) datastore: Arc<Datastore>,
+}
+
+impl DatabaseRootAccess {
+    pub fn into_scoped(self) -> DatabaseScopeAccess {
+        DatabaseScopeAccess {
+            auth: ScopeAuth(self.auth.0),
+            datastore: self.datastore,
+        }
+    }
+}
+
 impl DatabaseSystem {
     pub fn auth_root(&self) -> DatabaseRootAccess {
         DatabaseAccess {
@@ -84,11 +98,6 @@ impl DatabaseSystem {
             Some(token) => Ok(token.into()),
         }
     }
-}
-
-pub struct DatabaseAccess<S: Auth> {
-    pub(super) auth: S,
-    pub(super) datastore: Arc<Datastore>,
 }
 
 pub(super) trait Auth {
