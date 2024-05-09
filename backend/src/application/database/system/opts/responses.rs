@@ -98,10 +98,7 @@ impl<T: DeserializeOwned> ResponsesSelector<Option<T>> for usize {
         let response = vec.remove(self);
         match response.result? {
             Value::None | Value::Null => Ok(None),
-            Value::Object(object) => Ok(Some(
-                from_value(Value::Object(object)).map_err(|err| anyhow!(err.error))?,
-            )),
-            _ => bail!("invalid response type"),
+            some => Ok(Some(from_value(some).map_err(|err| anyhow!(err.error))?)),
         }
     }
 
@@ -146,10 +143,7 @@ impl<T: DeserializeOwned> ResponsesSelector<Option<T>> for (usize, &str) {
             };
             return match value {
                 Value::None | Value::Null => Ok(None),
-                Value::Object(object) => Ok(Some(
-                    from_value(Value::Object(object)).map_err(|err| anyhow!(err.error))?,
-                )),
-                _ => bail!("invalid response type"),
+                some => Ok(Some(from_value(some).map_err(|err| anyhow!(err.error))?)),
             };
         }
         match result {
