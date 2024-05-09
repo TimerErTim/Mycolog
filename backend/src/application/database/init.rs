@@ -1,3 +1,4 @@
+use anyhow::bail;
 use surrealdb_core::kvs::Datastore;
 use tracing::{error, info_span, instrument, Instrument};
 
@@ -27,16 +28,18 @@ pub async fn create_database_system(
             Ok(manager) => manager,
             Err(err) => {
                 error!(%err, "migrations failed to load due to error");
-                return;
+                bail!(err);
             }
         };
 
         if let Err(err) = manager.apply_migrations(&root_db).await {
             error!(%err, "unable to setup database due to migration error");
+            bail!(err);
         }
+        Ok(())
     }
     .instrument(info_span!("database_migration"))
-    .await;
+    .await?;
 
     Ok(db)
 }

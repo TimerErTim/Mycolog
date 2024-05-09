@@ -58,30 +58,33 @@ impl MigrationManager {
             .map_err(|_| anyhow!("tables inside info for db is not an object"))?;
 
         let has_migrations_table = tables.get("migrations").is_some();
-        let mut query = if !has_migrations_table {
+        if !has_migrations_table {
             info!("database has no migration content, importing initial schema...");
             db.query("BEGIN TRANSACTION;")
                 .query(self.schema_file.statements.clone())
                 .query(
                     r#"
-                    DEFINE TABLE migrations SCHEMAFULL PERMISSIONS NONE;
+                    DEFINE TABLE migration SCHEMAFULL PERMISSIONS NONE;
 
-                    DEFINE FIELD file_name ON TABLE migrations TYPE string;
-                    DEFINE FIELD number ON TABLE migrations TYPE int;
-                    DEFINE FIELD exec_time ON TABLE migrations TYPE datetime DEFAULT time::now();
+                    DEFINE FIELD file_name ON TABLE migration TYPE string;
+                    DEFINE FIELD number ON TABLE migration TYPE int;
+                    DEFINE FIELD exec_time ON TABLE migration TYPE datetime DEFAULT time::now();
                 "#,
                 )
-        } else {
-            db.query("BEGIN TRANSACTION;")
+                .query("COMMIT TRANSACTION;")
+                .await?
+                .checked()?;
         };
 
         let mut migrated_count = 0;
         for (index, migration_file) in self.migration_files.iter().enumerate() {
             let file_name = &migration_file.file_name;
-            let migration: Value = db
-                .query("SELECT exec_time, number FROM ONLY migrations WHERE file_name = $migration_file_name LIMIT 1;")
-                .bind("migration_file_name", &file_name).await?.take(0)?;
-            if migration.is_some() {
+            let migration: anyhow::Result<Value> = db
+                .query("SELECT exec_time, number FROM ONLY migration WHERE file_name = $migration_file_name LIMIT 1;")
+                .bind("migration_file_name", &file_name).await?.take(0);
+            if let Ok(migration) = migration
+                && migration.is_some()
+            {
                 let mut migration = migration.try_into_type::<Object>().map_err(|_| {
                     anyhow!("migration data of file {} is not an object", file_name)
                 })?;
@@ -117,17 +120,18 @@ impl MigrationManager {
             }
 
             migrated_count += 1;
-            query = query
+            db.query("BEGIN TRANSACTION;")
                 .query(migration_file.statements.clone())
                 .query(format!(
-                    "INSERT INTO migrations VALUES file_name = $file_name{0}, number = $number{0};",
+                    "CREATE migration SET file_name = $filename{0}, number = $number{0};",
                     index
                 ))
                 .bind(format!("filename{}", index), file_name)
-                .bind(format!("number{}", index), migration_file.number);
+                .bind(format!("number{}", index), migration_file.number)
+                .query("COMMIT TRANSACTION;")
+                .await?
+                .checked()?;
         }
-
-        query.query("COMMIT TRANSACTION;").await?.check()?;
 
         Ok(migrated_count)
     }
