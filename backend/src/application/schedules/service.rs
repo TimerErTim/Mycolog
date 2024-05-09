@@ -41,7 +41,7 @@ pub async fn schedule_service(
                 continue;
             }
         };
-        if let Err(err) = responses.check() {
+        if let Err(err) = responses.checked() {
             error!(schedule, ?err, "query for database responded with error");
             continue;
         }

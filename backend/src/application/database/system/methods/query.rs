@@ -114,7 +114,7 @@ impl<'a, S: Auth + Send + 'static> IntoFuture for Query<'a, S> {
 
 impl Responses {
     /// Checks if any of the contained responses expierenced an error. Returns first error encountered.
-    pub fn check(self) -> anyhow::Result<Self> {
+    pub fn checked(self) -> anyhow::Result<Self> {
         let mut responses = self;
         for response in &mut responses.0 {
             if response.result.is_err() {

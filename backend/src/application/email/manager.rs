@@ -149,7 +149,7 @@ impl EmailManager {
                 .query(format!("IF $user_id != NULL THEN ( RELATE ($email.id)->email_sent_to->$user_id SET recipient = $recipient_email_{index})"))
                 .bind(format!("recipient_email_{index}"), &recipient.email);
         }
-        query.await?.check()?;
+        query.await?.checked()?;
         Ok(())
     }
 }
