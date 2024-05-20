@@ -7,6 +7,7 @@ use axum::http::request::Parts;
 use axum::http::StatusCode;
 
 use crate::application::database::system::{AuthToken, DatabaseScopeAccess};
+use crate::application::database::DatabaseRootAccess;
 use crate::application::web::error::{ResponseError, ResponseErrorExt};
 use crate::application::web::routes::api::admin::AdminStatus;
 use crate::context::MycologContext;
@@ -32,5 +33,26 @@ impl FromRequestParts<Arc<MycologContext>> for DatabaseScopeAccess {
         state.db.auth_token(auth).await.map_err(|err| {
             anyhow!("unable to authorize token: {err:?}").with_code(StatusCode::UNAUTHORIZED)
         })
+    }
+}
+
+#[async_trait]
+impl FromRequestParts<Arc<MycologContext>> for DatabaseRootAccess {
+    type Rejection = ResponseError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &Arc<MycologContext>,
+    ) -> Result<Self, Self::Rejection> {
+        let admin_status = parts
+            .extensions
+            .get::<AdminStatus>()
+            .cloned()
+            .unwrap_or(AdminStatus::Unauthorized);
+        if let AdminStatus::Authorized = admin_status {
+            return Ok(state.db.auth_root());
+        }
+
+        return Err(anyhow!("unable to authorize admin").with_code(StatusCode::UNAUTHORIZED));
     }
 }
