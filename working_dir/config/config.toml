@@ -2,7 +2,7 @@
 noreply_sender = "noreply@example.com"
 
 [images]
-max_bytes_per_user = 1_000_000_000
+max_bytes_per_user = 1000000000
 
 [web]
 ip = "127.0.0.1"
