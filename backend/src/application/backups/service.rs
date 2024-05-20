@@ -6,8 +6,6 @@ use std::time::Duration;
 
 use anyhow::{anyhow, bail};
 use chrono::Local;
-use flate2::write::GzEncoder;
-use flate2::Compression;
 use futures_lite::StreamExt;
 use tokio::time::{interval, interval_at, sleep, Instant, MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
@@ -58,8 +56,9 @@ async fn backup_database(
 ) -> anyhow::Result<()> {
     let file_path = calc_backup_file_name();
 
-    let target_file = File::create(file_path.clone())?;
-    let _ = write_backup(surreal, target_file).await?;
+    let mut target_file = tokio::fs::File::create(file_path.clone()).await?;
+    let mut compressed_reader = surreal.backup().await?;
+    tokio::io::copy_buf(&mut compressed_reader, &mut target_file).await?;
     info!(
         "database backup written to: {:?}",
         file_path.file_name().ok_or(anyhow!("no filename"))?
@@ -82,34 +81,13 @@ async fn backup_database(
     Ok(())
 }
 
-async fn write_backup<W: Write + Send + 'static>(
-    db: &DatabaseRootAccess,
-    writer: W,
-) -> anyhow::Result<W> {
-    let (sender, mut receiver) = async_channel::bounded::<Vec<u8>>(10_000);
-    let write_task = run_catch(async move {
-        let mut compression_encoder = GzEncoder::new(writer, Compression::best());
-
-        while let Some(bytes) = receiver.next().await {
-            compression_encoder.write_all(&bytes)?;
-        }
-
-        compression_encoder.try_finish()?;
-        Ok(compression_encoder.finish()?)
-    });
-
-    db.export(sender).await?;
-    let task_output = write_task.await?;
-    Ok(task_output)
-}
-
 fn calc_backup_file_name() -> PathBuf {
     let now = Local::now();
     let time = now.format("%Y%m%d%H%M%S").to_string();
     let file_name = format!("backup_{time}");
 
     let mut file_path = Path::new("backups").join(file_name.clone());
-    file_path.set_extension("gz");
+    file_path.set_extension("br");
     file_path
 }
 

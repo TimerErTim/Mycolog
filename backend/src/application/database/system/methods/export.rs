@@ -1,94 +1,29 @@
+use std::collections::VecDeque;
 use std::io::{BufReader, BufWriter, Read, Write};
+use std::{io, thread};
 
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use futures_lite::{Stream, StreamExt};
+use tokio::io::{AsyncBufRead, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::sync::mpsc::{Sender, UnboundedSender};
+use tokio_util::io::StreamReader;
 use tracing::{error, info};
 
 use crate::application::database::system::access::Auth;
 use crate::application::database::DatabaseRootAccess;
 
 impl DatabaseRootAccess {
-    pub async fn export(&self, export: impl IntoExport) -> anyhow::Result<()> {
+    pub async fn export(&self) -> anyhow::Result<impl AsyncBufRead> {
         info!("attempting database export");
-        let result: anyhow::Result<()> = try {
-            let sender = export.into_export().await?;
-            let export = self
-                .datastore
-                .export(self.auth.as_session(), sender)
-                .await?;
-            export.await?;
-        };
-        result.inspect_err(|err| error!(?err, "database export failed due to error"))?;
-        Ok(())
-    }
-}
-
-pub trait IntoExport {
-    async fn into_export(self) -> anyhow::Result<async_channel::Sender<Vec<u8>>>;
-}
-
-impl IntoExport for async_channel::Sender<Vec<u8>> {
-    async fn into_export(self) -> anyhow::Result<async_channel::Sender<Vec<u8>>> {
-        Ok(self)
-    }
-}
-
-impl IntoExport for Sender<Vec<u8>> {
-    async fn into_export(self) -> anyhow::Result<async_channel::Sender<Vec<u8>>> {
-        let (send, receiver) = async_channel::bounded::<Vec<u8>>(self.max_capacity());
+        let (send, recv) = async_channel::bounded(4_096);
+        let export = self.datastore.export(self.auth.as_session(), send).await?;
         tokio::spawn(async move {
-            while let Ok(bytes) = receiver.recv().await {
-                if let Err(err) = self.send(bytes).await {
-                    error!(?err, "expierenced error during export sender propagation");
-                    break;
-                }
-            }
+            export
+                .await
+                .inspect_err(|err| error!(?err, "database export failed due to error"))
         });
-        Ok(send)
-    }
-}
 
-impl IntoExport for UnboundedSender<Vec<u8>> {
-    async fn into_export(self) -> anyhow::Result<async_channel::Sender<Vec<u8>>> {
-        let (send, receiver) = async_channel::unbounded::<Vec<u8>>();
-        tokio::spawn(async move {
-            while let Ok(bytes) = receiver.recv().await {
-                if let Err(err) = self.send(bytes) {
-                    error!(?err, "expierenced error during export sender propagation");
-                    break;
-                }
-            }
-        });
-        Ok(send)
-    }
-}
-
-impl<W: Write + Send + 'static> IntoExport for BufWriter<W> {
-    async fn into_export(mut self) -> anyhow::Result<async_channel::Sender<Vec<u8>>> {
-        let (send, receiver) = async_channel::unbounded::<Vec<u8>>();
-        tokio::spawn(async move {
-            while let Ok(bytes) = receiver.recv().await {
-                if let Err(err) = self.write_all(&bytes) {
-                    error!(?err, "expierenced error during export writing");
-                    break;
-                }
-            }
-        });
-        Ok(send)
-    }
-}
-
-impl<W: AsyncWrite + Unpin + Send + 'static> IntoExport for tokio::io::BufWriter<W> {
-    async fn into_export(mut self) -> anyhow::Result<async_channel::Sender<Vec<u8>>> {
-        let (send, receiver) = async_channel::bounded::<Vec<u8>>(10_000);
-        tokio::spawn(async move {
-            while let Ok(bytes) = receiver.recv().await {
-                if let Err(err) = self.write_all(&bytes).await {
-                    error!(?err, "expierenced error during export writing");
-                    break;
-                }
-            }
-        });
-        Ok(send)
+        Ok(StreamReader::new(recv.map(|bytes| -> io::Result<_> {
+            Ok(VecDeque::from(bytes))
+        })))
     }
 }
