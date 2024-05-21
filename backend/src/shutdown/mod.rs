@@ -30,14 +30,10 @@ pub async fn try_shutdown(context: Arc<MycologContext>) -> anyhow::Result<()> {
     context.tasks.wait().await;
     info!("quitted all background tasks");
 
-    match Arc::into_inner(context) {
-        None => {
-            warn!("some threads still made use of global context");
-        }
-        Some(context) => {
-            drop(context);
-        }
-    };
+    let context = Arc::into_inner(context);
+    if context.is_none() {
+        warn!("some threads still made use of global context");
+    }
 
     Ok(())
 }

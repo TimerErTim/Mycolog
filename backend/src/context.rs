@@ -7,6 +7,7 @@ use crate::application::{DatabaseSystem, EmailManager, ImageManager, ScheduleQue
 use crate::config::MycologConfig;
 use crate::secrets::MycologSecrets;
 use crate::shutdown::exit::ExitMessage;
+use crate::startup::logging::LoggingHandle;
 
 pub struct MycologContext {
     pub config: MycologConfig,
@@ -16,6 +17,8 @@ pub struct MycologContext {
     pub email: EmailManager,
     pub images: ImageManager,
     pub schedules: ScheduleQueries,
+
+    pub logging: LoggingHandle,
 
     pub tasks: TaskTracker,
 

@@ -11,6 +11,7 @@ pub fn prepare_application_dirs() -> anyhow::Result<()> {
 }
 
 fn create_application_dirs() -> anyhow::Result<()> {
+    create_dir_all("logs/")?;
     create_dir_all("data/")?;
     create_dir_all("images/")?;
     create_dir_all("backups/")?;
@@ -18,7 +19,6 @@ fn create_application_dirs() -> anyhow::Result<()> {
 }
 
 fn check_application_dirs() -> anyhow::Result<()> {
-    check_dir_all("log/")?;
     check_dir_all("migrations/")?;
     check_dir_all("schedules/")?;
     check_dir_all("site/")?;
@@ -35,7 +35,7 @@ fn check_dir_all(path: impl Into<PathBuf>) -> anyhow::Result<bool> {
     if !path.is_dir() {
         warn!(
             dir = %path.display(),
-            "Directory is missing but required for application"
+            "directory is missing but required for application"
         );
         return Ok(false);
     }

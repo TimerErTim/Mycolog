@@ -1,8 +1,9 @@
+use std::fs::File;
 use std::process::exit;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::anyhow;
-use tokio::sync::Mutex;
+use tokio::sync::Mutex as AsyncMutex;
 use tracing::{debug, error, info, instrument};
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -16,11 +17,11 @@ use crate::context::MycologContext;
 use crate::secrets::parse_secrets;
 use crate::shutdown::exit::take_exit_recevier;
 use crate::startup::directories::prepare_application_dirs;
-use crate::startup::logging::setup_logging;
+use crate::startup::logging::{setup_logging, LoggingHandle};
 use crate::utils::asynchronous::run_catch;
 
 mod directories;
-mod logging;
+pub mod logging;
 
 #[instrument]
 pub async fn startup(arguments: MycologArguments) -> Arc<MycologContext> {
@@ -42,14 +43,17 @@ pub async fn startup(arguments: MycologArguments) -> Arc<MycologContext> {
 }
 
 async fn try_startup(arguments: MycologArguments) -> anyhow::Result<MycologContext> {
-    setup_logging()?;
+    let logging = setup_logging()?;
     prepare_application_dirs()?;
 
-    build_context(arguments).await
+    build_context(arguments, logging).await
 }
 
-#[instrument]
-async fn build_context(arguments: MycologArguments) -> anyhow::Result<MycologContext> {
+#[instrument(skip(logging))]
+async fn build_context(
+    arguments: MycologArguments,
+    logging: LoggingHandle,
+) -> anyhow::Result<MycologContext> {
     let config = parse_config(arguments);
     let secrets = parse_secrets();
     let db = create_database_system(&config, &secrets).await?;
@@ -58,7 +62,7 @@ async fn build_context(arguments: MycologArguments) -> anyhow::Result<MycologCon
     let schedules = load_schedule_queries("schedules/").await?;
 
     let exit_receiver =
-        Mutex::new(take_exit_recevier().ok_or(anyhow!("exit receiver was already in use"))?);
+        AsyncMutex::new(take_exit_recevier().ok_or(anyhow!("exit receiver was already in use"))?);
 
     Ok(MycologContext {
         config,
@@ -68,6 +72,7 @@ async fn build_context(arguments: MycologArguments) -> anyhow::Result<MycologCon
         email,
         images,
         schedules,
+        logging,
         tasks: Default::default(),
         task_cancel_token: Default::default(),
     })

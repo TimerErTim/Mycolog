@@ -16,6 +16,7 @@ pub use images::ImageManager;
 pub use schedules::load_schedule_queries;
 pub use schedules::ScheduleQueries;
 
+use crate::application::logging::logging_task;
 use crate::application::schedules::schedule_task;
 use crate::application::web::web_server_task;
 use crate::context::MycologContext;
@@ -25,6 +26,7 @@ mod backups;
 mod database;
 mod email;
 mod images;
+mod logging;
 mod schedules;
 mod web;
 
@@ -56,6 +58,8 @@ pub async fn try_start_application(context: Arc<MycologContext>) -> anyhow::Resu
     debug!("tracking schedule service");
     tasks.spawn(web_server_task(Arc::clone(&context)));
     debug!("tracking web server service");
+    tasks.spawn(logging_task(Arc::clone(&context)));
+    debug!("tracking logging service");
 
     tasks.close();
     Ok(())
