@@ -1,6 +1,8 @@
 use std::future::Future;
 use std::sync::Arc;
 
+use tokio::signal::unix::SignalKind;
+use tokio::task::JoinSet;
 use tokio_util::task::TaskTracker;
 use tracing::debug;
 use tracing_log::log::info;
@@ -18,6 +20,7 @@ pub use schedules::ScheduleQueries;
 
 use crate::application::logging::logging_task;
 use crate::application::schedules::schedule_task;
+use crate::application::signals::exit_signal;
 use crate::application::web::web_server_task;
 use crate::context::MycologContext;
 use crate::utils::asynchronous::run_catch;
@@ -28,6 +31,7 @@ mod email;
 mod images;
 mod logging;
 mod schedules;
+mod signals;
 mod web;
 
 pub async fn run_application(state: &Arc<MycologContext>) -> i32 {
@@ -40,7 +44,7 @@ pub async fn run_application(state: &Arc<MycologContext>) -> i32 {
 
     let mut exit_receiver = state.exit_receiver.lock().await;
     tokio::select! {
-        _ = tokio::signal::ctrl_c() => 0,
+        _ = exit_signal() => 0,
         message = exit_receiver.recv() => if let Some(exit_code) = message {
             exit_code
         } else {
