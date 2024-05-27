@@ -7,6 +7,7 @@ use crate::application::web::routes::api::auth::signin::signin_router;
 use crate::application::web::routes::api::auth::signup::signup_router;
 use crate::context::MycologContext;
 
+mod check;
 mod cookie;
 mod logout;
 mod signin;
@@ -18,4 +19,5 @@ pub fn auth_router(context: &Arc<MycologContext>) -> Router<Arc<MycologContext>>
         .nest("/signup", signup_router(context))
         .nest("/signin", signin_router(context))
         .nest("/logout", logout_router(context))
+        .nest("/check", check_router(context))
 }
