@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::Router;
 
+use crate::application::web::routes::api::auth::check::check_router;
 use crate::application::web::routes::api::auth::logout::logout_router;
 use crate::application::web::routes::api::auth::signin::signin_router;
 use crate::application::web::routes::api::auth::signup::signup_router;
