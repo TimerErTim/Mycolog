@@ -1,0 +1,6 @@
+{
+  "backend_protocol": "http",
+  "backend_host": "localhost",
+  "backend_port": 8031,
+  "backend_endpoint": "/api"
+}

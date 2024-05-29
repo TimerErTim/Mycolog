@@ -1,0 +1,6 @@
+{
+  "backend_protocol": "https",
+  "backend_host": "mycolog.net",
+  "backend_port": 443,
+  "backend_endpoint": "/api"
+}
