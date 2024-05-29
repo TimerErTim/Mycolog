@@ -1,6 +1,6 @@
 <script lang="ts">
     import "tailwindcss/tailwind.css"
-    import "carbon-components-svelte/css/all.css"
+    import "@fortawesome/fontawesome-free/css/all.min.css"
 </script>
 
 <slot/>
