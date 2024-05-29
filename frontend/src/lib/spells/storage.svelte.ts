@@ -4,18 +4,14 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     let value = $state<T>(initialValue)
 
     $effect.pre(() => {
-        if (browser) {
-            let storageContent = localStorage.getItem(key)
-            if (storageContent !== null) {
-                value = JSON.parse(storageContent)
-            }
+        let storageContent = localStorage.getItem(key)
+        if (storageContent !== null) {
+            value = JSON.parse(storageContent)
         }
     })
 
     $effect(() => {
-        if (browser) {
-            localStorage.setItem(key, JSON.stringify(value))
-        }
+        localStorage.setItem(key, JSON.stringify(value))
     })
 
     return {
@@ -24,6 +20,9 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         },
         set value(val) {
             value = val
+        },
+        reset() {
+            value = initialValue
         }
     }
 }
