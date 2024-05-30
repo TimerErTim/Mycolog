@@ -1,10 +1,10 @@
-import {fetchBackend} from "$lib/api/index";
+import {fetchBackend, type ResponseResult} from "$lib/api/index";
 
 export interface SignInOptions {
     remember?: boolean
 }
 
-export async function signin(email: string, password: string, options?: SignInOptions): Promise<null | string> {
+export async function signin(email: string, password: string, options?: SignInOptions): Promise<ResponseResult<string, string>> {
     const response = await fetchBackend("/auth/signin", {
         method: "POST",
         params: {
@@ -19,14 +19,18 @@ export async function signin(email: string, password: string, options?: SignInOp
         })
     })
 
-    return response.ok ? null : await response.text()
+    return response.ok ? {
+        response: await response.text(),
+    } : {
+        error: await response.text()
+    }
 }
 
 export interface SignUpOptions {
 
 }
 
-export async function signup(email: string, password: string, options?: SignUpOptions): Promise<null | string> {
+export async function signup(email: string, password: string, options?: SignUpOptions) {
     const response = await fetchBackend("/auth/signup", {
         method: "POST",
         headers: {
@@ -38,34 +42,36 @@ export async function signup(email: string, password: string, options?: SignUpOp
         })
     })
 
-    return response.ok ? null : await response.text()
+    return response.ok ? {
+        response: await response.text(),
+    } : {
+        error: await response.text()
+    }
 }
 
-export async function check(): Promise<CheckResponse> {
+export async function check() {
     const response = await fetchBackend("/auth/check", {
         method: "POST"
     })
 
-    return {
-        code: response.status,
-        text: response.ok ? null : await response.text(),
-        get ok(): boolean {
-            return response.ok
+    return response.ok ? {
+        response: await response.text(),
+    } : {
+        error: {
+            code: response.status,
+            text: await response.text()
         }
     }
 }
 
-export interface CheckResponse {
-    code: number
-    text: string | null
-
-    get ok(): boolean
-}
-
-export async function logout(): Promise<null | string> {
+export async function logout() {
     const response = await fetchBackend("/auth/logout", {
         method: "POST"
     })
 
-    return response.ok ? null : await response.text()
+    return response.ok ? {
+        response: await response.text(),
+    } : {
+        error: await response.text()
+    }
 }

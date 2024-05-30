@@ -1,6 +1,14 @@
 import {api} from "$lib/config";
 import {objectToRecord} from "$lib/utils/conversion";
 
+export type ResponseResult<O, E> = {
+    response: O,
+    error?: undefined
+} | {
+    response?: undefined,
+    error: E
+}
+
 function baseBackendUrl() {
     return `${api.backendProtocol}://${api.backendHost}:${api.backendPort}${api.backendEndpoint}`
 }
