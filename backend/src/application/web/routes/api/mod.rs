@@ -29,9 +29,8 @@ pub fn api_router(context: &Arc<MycologContext>) -> Router<Arc<MycologContext>> 
     if cfg!(feature = "dev-env") {
         // Enable cors support in dev environment for seperate frontend
         router = router.layer(
-            CorsLayer::new()
-                .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
-                .allow_headers(AllowHeaders::any()),
+            CorsLayer::very_permissive()
+                .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap()),
         )
     }
 
