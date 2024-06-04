@@ -21,6 +21,18 @@ pub struct DatabaseAccess<S: Auth> {
     pub(super) datastore: Arc<Datastore>,
 }
 
+impl<S: Auth> Clone for DatabaseAccess<S>
+where
+    S: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            auth: self.auth.clone(),
+            datastore: Arc::clone(&self.datastore),
+        }
+    }
+}
+
 impl DatabaseRootAccess {
     pub fn into_scoped(self) -> DatabaseScopeAccess {
         DatabaseScopeAccess {
@@ -104,6 +116,7 @@ pub(super) trait Auth {
     fn as_session(&self) -> &Session;
 }
 
+#[derive(Clone)]
 pub struct RootAuth(Session);
 
 impl Auth for RootAuth {
@@ -112,6 +125,7 @@ impl Auth for RootAuth {
     }
 }
 
+#[derive(Clone)]
 pub struct ScopeAuth(Session);
 
 impl Auth for ScopeAuth {
