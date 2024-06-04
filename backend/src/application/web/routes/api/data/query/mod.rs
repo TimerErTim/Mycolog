@@ -10,13 +10,13 @@ use crate::application::web::error::{ResponseErrorExt, ResponseResult};
 use crate::application::web::routes::api::data::query::data::QueryRequest;
 use crate::context::MycologContext;
 
-mod data;
+pub mod data;
 
 pub fn query_router(context: &Arc<MycologContext>) -> Router<Arc<MycologContext>> {
     Router::new().route("/", post(handle_query))
 }
 
-async fn handle_query(
+pub async fn handle_query(
     db: DatabaseScopeAccess,
     Json(request): Json<QueryRequest>,
 ) -> ResponseResult<Json<Vec<Response>>> {
