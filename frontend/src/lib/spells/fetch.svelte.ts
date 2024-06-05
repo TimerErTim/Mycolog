@@ -1,6 +1,6 @@
 import type {ResponseResult} from "$lib/api";
 
-export type FetchHandler<O, E, A extends any[]> = ReturnType<typeof useFetch<O, E, A>>
+export type FetchHandle<O, E, A extends any[]> = ReturnType<typeof useFetch<O, E, A>>
 
 export function useFetch<O, E, A extends any[]>(fetch: (...args: A) => Promise<ResponseResult<O, E>>) {
     let loading = $state(false)
