@@ -17,7 +17,7 @@ mod query;
 pub fn data_router(context: &Arc<MycologContext>) -> Router<Arc<MycologContext>> {
     Router::new()
         .nest("/query", query_router(context))
-        .nest("/mutli", multi_router(context))
+        .nest("/multi", multi_router(context))
         .nest("/image", image_router(context))
         .nest("/backup", backup_router(context))
 }

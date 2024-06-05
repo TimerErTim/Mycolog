@@ -16,11 +16,11 @@ pub fn multi_router(context: &Arc<MycologContext>) -> Router<Arc<MycologContext>
 
 async fn handle_multi(
     db: DatabaseScopeAccess,
-    Json(payload): Json<MultiRequest>,
+    Json(MultiRequest(payload)): Json<MultiRequest>,
 ) -> ResponseResult<Json<BTreeMap<String, Vec<Response>>>> {
     let mut responses = BTreeMap::new();
 
-    for (id, request) in payload.requests {
+    for (id, request) in payload {
         let result = handle_query(db.clone(), Json(request)).await;
         if let Ok(Json(response)) = result {
             responses.insert(id, response);

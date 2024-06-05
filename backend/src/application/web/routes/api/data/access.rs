@@ -29,7 +29,9 @@ impl FromRequestParts<Arc<MycologContext>> for DatabaseScopeAccess {
             return Ok(state.db.auth_root().into_scoped());
         }
 
-        let auth = AuthToken::from_request_parts(parts, state).await?;
+        let auth = AuthToken::from_request_parts(parts, state)
+            .await
+            .map_err(|err| err.with_code(StatusCode::UNAUTHORIZED))?;
         state.db.auth_token(auth).await.map_err(|err| {
             anyhow!("unable to authorize token: {err:?}").with_code(StatusCode::UNAUTHORIZED)
         })
