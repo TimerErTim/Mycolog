@@ -37,7 +37,7 @@
         e.preventDefault()
 
         signupRequest.reset()
-        let result = await signupRequest.run(email.trim(), password.trim())
+        let result = await signupRequest.send(email.trim(), password.trim())
 
         if (result.error === undefined) {
             onsuccess && onsuccess()

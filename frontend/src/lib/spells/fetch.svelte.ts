@@ -18,7 +18,7 @@ export function useFetch<O, E, A extends any[]>(fetch: (...args: A) => Promise<R
             return error
         },
 
-        async run(...args: A) {
+        async send(...args: A) {
             loading = true
             const result = await fetch(...args)
             loading = false

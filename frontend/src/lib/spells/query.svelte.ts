@@ -36,7 +36,7 @@ export function useQuery(statement: string, initialParams: object | undefined = 
 
         async resend(params?: typeof queryParams) {
             params && this.setParams(params)
-            return queryRequest.run(statement, queryParams)
+            return queryRequest.send(statement, queryParams)
         },
         setParams(params: typeof queryParams) {
             queryParams = params

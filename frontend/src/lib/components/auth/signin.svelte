@@ -34,7 +34,7 @@
         e.preventDefault()
 
         signinRequest.reset()
-        let result = await signinRequest.run(email.trim(), password.trim(), {remember})
+        let result = await signinRequest.send(email.trim(), password.trim(), {remember})
 
         if (result.error === undefined) {
             if (remember) {
