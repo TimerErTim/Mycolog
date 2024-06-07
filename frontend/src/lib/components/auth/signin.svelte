@@ -56,7 +56,7 @@
     } = $props()
 </script>
 
-<form class="card gap-2 max-w-screen-sm" onsubmit={handleSignin}>
+<form class="card gap-4 max-w-screen-sm" onsubmit={handleSignin}>
     <TextInput bind:value={email} invalidText={signinRequest.error !== undefined ? "" : undefined} labelText="Email"
                placeholderText="example@gmail.com"
                type="email"

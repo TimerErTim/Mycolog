@@ -44,7 +44,7 @@
         {@render before()}
         <input {...props} bind:value={value} class="w-full" {disabled} placeholder={placeholderText} {type}/>
         {#if warningText !== undefined}
-            <div class="tooltip" data-tip={warningText}>
+            <div class="tooltip tooltip-left" data-tip={warningText}>
                 <i class="fa-solid fa-warning text-warning"></i>
             </div>
         {/if}

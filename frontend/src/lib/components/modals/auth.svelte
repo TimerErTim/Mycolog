@@ -16,13 +16,23 @@
     let signingin = $state(true)
 </script>
 
-<dialog bind:this={dialog} class="modal" oncancel={(e) => e.preventDefault()}>
-    <div class="modal-box">
-        <h3 class="font-bold text-lg ml-4">{signingin ? "Sign in" : "Sign up"}!</h3>
-        {#if signingin}
-            <SigninForm onchangesignup={() => signingin = false} onsuccess={auth.success}/>
-        {:else}
-            <SignupForm onchangesignin={() => signingin = true} onsuccess={auth.success}/>
-        {/if}
+<dialog bind:this={dialog} class="modal modal-bottom sm:modal-middle" oncancel={(e) => e.preventDefault()}>
+    <div class="modal-box bg-base-200">
+        <div class="hero-content flex-col p-0">
+            <div class="text-center">
+                <h1 class="text-5xl font-bold">{signingin ? "Login" : "Register"} now!</h1>
+                <p class="py-6">You need to authenticate in order to use this website. The data you store will be linked
+                    to your account.</p>
+            </div>
+            <div class="card shrink-0 w-full max-w-screen-sm shadow-2xl bg-base-100">
+                <div class="card-body">
+                    {#if signingin}
+                        <SigninForm onchangesignup={() => signingin = false} onsuccess={auth.success}/>
+                    {:else}
+                        <SignupForm onchangesignin={() => signingin = true} onsuccess={auth.success}/>
+                    {/if}
+                </div>
+            </div>
+        </div>
     </div>
 </dialog>
