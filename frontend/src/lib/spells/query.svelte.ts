@@ -8,7 +8,8 @@ import type {ResponseResult} from "$lib/api";
 const queries = new Array<QueryHandle<any>>()
 
 export type QueryHandle<T extends object | undefined = undefined> = {
-    readonly loading: boolean,
+    readonly isLoading: boolean,
+    readonly isResolved: boolean,
     readonly response: QueryResponse[] | undefined,
     readonly error: string | undefined,
     resend(params?: T): Promise<ResponseResult<QueryResponse[], string>>,
@@ -24,8 +25,11 @@ export function useQuery(statement: string, initialParams: object | undefined = 
     let queryParams = initialParams
 
     const queryHandle = {
-        get loading() {
-            return queryRequest.loading
+        get isLoading() {
+            return queryRequest.isLoading
+        },
+        get isResolved() {
+            return queryRequest.isResolved
         },
         get response() {
             return queryRequest.response

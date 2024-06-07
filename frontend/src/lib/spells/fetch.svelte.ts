@@ -8,8 +8,11 @@ export function useFetch<O, E, A extends any[]>(fetch: (...args: A) => Promise<R
     let error = $state<E | undefined>(undefined)
 
     return {
-        get loading() {
+        get isLoading() {
             return loading
+        },
+        get isResolved() {
+            return response !== undefined || error !== undefined
         },
         get response() {
             return response

@@ -83,8 +83,8 @@
     </div>
 
 
-    <button class="btn btn-primary" disabled={signinRequest.loading || !fieldsValid} type="submit">
-        {#if signinRequest.loading}
+    <button class="btn btn-primary" disabled={signinRequest.isLoading || !fieldsValid} type="submit">
+        {#if signinRequest.isLoading}
             <span class="loading loading-spinner"></span>
         {/if}
         Log In

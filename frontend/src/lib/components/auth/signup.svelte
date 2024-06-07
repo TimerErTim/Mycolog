@@ -80,8 +80,8 @@
     </div>
 
 
-    <button class="btn btn-primary" disabled={signupRequest.loading || !fieldsValid} type="submit">
-        {#if signupRequest.loading}
+    <button class="btn btn-primary" disabled={signupRequest.isLoading || !fieldsValid} type="submit">
+        {#if signupRequest.isLoading}
             <span class="loading loading-spinner"></span>
         {/if}
         Create Account
