@@ -7,7 +7,12 @@ import {mapRecordValues} from "$lib/utils/conversion";
 
 export type QueryResponse = {
     time: string,
-    result: any | string
+    result: any,
+    error?: void
+} | {
+    time: string,
+    result?: void,
+    error: string
 }
 
 async function query(
@@ -60,7 +65,7 @@ async function queryMulti(
 }
 const authorizedMulti = ensureAuthorized(queryMulti)
 
-async function mappedMulti(input: Record<string, [string, object]>) {
+async function mappedMulti(input: Record<string, [string, object | undefined]>) {
     const mappedInput = mapRecordValues(input, ([statements, params]) => ({
         statements,
         params
